@@ -81,3 +81,46 @@ def test_real_headers_all_map_and_dealer_code_comes_from_division(
     assert free is not None and free.normalized["expected_timeline__text"] == "Next week"
     prov = db.scalars(select(m.Entity).where(m.Entity.provisional.is_(True))).all()
     assert any(e.canonical_key.startswith("newsetup||kollam|") for e in prov)
+
+
+def test_master_with_implementation_plan_sheet_stays_master_and_reimport(
+    db: Session, tmp_path: Path
+) -> None:
+    from sqlalchemy import func
+
+    from app.workbooks.ingest import delete_workbook_import
+
+    dealer = [REAL_HEADERS] + [
+        mk(
+            f"300A{i:03d}-Sv&Pa-Town{i}-Abc",
+            f"Town{i}",
+            "Ready To Deploy" if i % 2 else "Not Ready",
+        )
+        for i in range(12)
+    ]
+    # the real master also has a bigger sheet named "implementation Plan" and a pivot "Summary"
+    plan = [REAL_HEADERS] + [
+        mk(f"300B{i:03d}-Sv&Pa-Plan{i}-Abc", "Plan", "Not Ready") for i in range(30)
+    ]
+    p = make_xlsx(
+        tmp_path / "TMS_Delight_09-10-2026.xlsx",
+        {"Summary": [["Row Labels", "Count of Division Code"], ["x", 1]],
+         "implementation Plan": plan, "Dealer List": dealer},
+    )  # fmt: skip
+    at = datetime(2026, 10, 9, 10, tzinfo=UTC)
+    res = import_workbook(db, p, filename=p.name, posted_at=at, cfg=CFG, derived_dir=tmp_path / "d")
+    db.flush()
+    imp = res.import_
+    assert imp is not None and imp.role == "MASTER"  # not IMPLEMENTATION_PLAN
+    assert res.stats["rows"] == 12  # the preferred "Dealer List" sheet is the primary one
+    n_obs = db.scalar(select(func.count()).select_from(m.Observation))
+    assert n_obs and n_obs > 0
+    # re-processing: delete the import, then import the same file again
+    delete_workbook_import(db, imp, "test")
+    assert db.scalar(select(func.count()).select_from(m.WorkbookImport)) == 0
+    assert db.scalar(select(func.count()).select_from(m.Observation)) == 0
+    again = import_workbook(
+        db, p, filename=p.name, posted_at=at, cfg=CFG, derived_dir=tmp_path / "d"
+    )
+    assert again.created is True and again.import_ is not None and again.import_.role == "MASTER"
+    assert db.scalar(select(func.count()).select_from(m.AuditLog)) == 1

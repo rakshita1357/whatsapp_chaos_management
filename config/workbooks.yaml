@@ -13,3 +13,4 @@ ready_values: [ready]
 diff_column_groups:
   timeline: [site_ready_date, planned_install_date, expected_timeline]
   dispatch: [dispatch_date, dispatch_status]
+primary_sheet_names: ["dealer list"]   # preferred data sheet when a workbook has several

@@ -165,21 +165,28 @@ def import_workbook(
 
     parsed = [_parse_sheet(s, cfg, "ANY") for s in opened.sheets]
     data_sheets = [p for p in parsed if p.kind == "data_table"]
-    primary = max(data_sheets, key=lambda p: len(p.rows), default=None)
+    preferred = {str(n).casefold() for n in cfg.settings.get("primary_sheet_names", [])}
+    primary = next((p for p in data_sheets if p.name.casefold() in preferred), None) or max(
+        data_sheets, key=lambda p: len(p.rows), default=None
+    )
     only_pivots = primary is None and any(p.kind == "pivot_summary" for p in parsed)
     readiness = (
         [r["norm"].get("readiness") or r["norm"].get("readiness__text") for r in primary.rows]
         if primary
         else []
     )
+    # only the PRIMARY sheet's name can make a file an implementation plan: the master also
+    # carries a sheet called "implementation Plan" next to "Dealer List" and "Summary"
     role = infer_role(
-        [p.name for p in parsed], len(primary.rows) if primary else 0, readiness, only_pivots, cfg
+        [primary.name] if primary else [p.name for p in parsed],
+        len(primary.rows) if primary else 0,
+        readiness,
+        only_pivots,
+        cfg,
     )
     if primary is not None:  # re-normalize enums with the real role
         parsed = [_parse_sheet(s, cfg, role) for s in opened.sheets]
-        primary = max(
-            [p for p in parsed if p.kind == "data_table"], key=lambda p: len(p.rows), default=None
-        )
+        primary = next((p for p in parsed if p.name == primary.name), primary)
     canon = [m.canonical for m in primary.mapping] if primary else []
     fam = family_key(filename, role, canon)
     imp = WorkbookImport(
@@ -570,3 +577,34 @@ def ready_delta(
 
 
 __all__ = ["import_workbook", "diff_imports", "ready_delta", "WorkbookResult", "OpenedWorkbook"]
+
+
+def delete_workbook_import(session: Session, imp: WorkbookImport, reason: str) -> None:
+    """Dev/admin re-processing: remove one import (sheets/rows cascade), its diffs and the
+    observations it wrote. Entities created from it are kept (upserts are idempotent)."""
+    from sqlalchemy import text
+
+    from app.db.models import AuditLog
+
+    session.execute(
+        text("DELETE FROM observations WHERE source_ref->>'workbook_import_id' = :i"),
+        {"i": str(imp.id)},
+    )
+    for d in session.scalars(
+        select(WorkbookDiff).where(
+            (WorkbookDiff.from_import_id == imp.id) | (WorkbookDiff.to_import_id == imp.id)
+        )
+    ):
+        session.execute(delete(WorkbookDiffItem).where(WorkbookDiffItem.diff_id == d.id))
+        session.delete(d)
+    session.add(
+        AuditLog(
+            actor="system",
+            action="workbook_import_deleted",
+            table_name="workbook_imports",
+            row_id=str(imp.id),
+            reason=reason,
+        )
+    )
+    session.delete(imp)
+    session.flush()

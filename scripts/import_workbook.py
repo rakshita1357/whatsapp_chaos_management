@@ -36,6 +36,19 @@ def main() -> None:
         raise SystemExit("--posted-at needs a timezone offset, e.g. +05:30")
     setup_logging()
     with session_scope() as s:
+        if a.replace:
+            from sqlalchemy import select
+
+            from app.core.blobstore import sha256_file
+            from app.db.models import WorkbookImport
+            from app.workbooks.ingest import delete_workbook_import
+
+            old = s.scalar(
+                select(WorkbookImport).where(WorkbookImport.sha256 == sha256_file(a.path))
+            )
+            if old is not None:
+                delete_workbook_import(s, old, "re-import with --replace")
+                print("deleted previous import", old.id)
         res = import_workbook(
             s,
             a.path,
