@@ -50,6 +50,13 @@ Installation, Dispatch Date, Status, Albersons Remakrs (sic). All 21 map exactly
   surface as `unmapped_status_value` review items); which columns count as timeline vs dispatch in diffs.
 - Sheets `Summary` and `implementation Plan` headers not yet seen.
 
+### Assumptions adopted by the owner's colleague ("use your assumptions")
+`Status` = dispatch status; `Date` = row/update date; timeline columns = Installation Planned Date + Expecting
+Timeline for Installation; dispatch columns = Dispatch Date + Status. Status value lists still to be read from the real file
+(`scripts/inspect_workbook.py`). Bug fixed: a master carrying an `implementation Plan` sheet was classified
+IMPLEMENTATION_PLAN; now only the primary sheet (preferred: `Dealer List`) decides the role.
+Real master confirmed to need the pivot sanitizer (`opened_via: sanitized`).
+
 ## Open questions for the owner
 1. **The repo was empty.** (M2 placeholders added: `config/header_aliases.yaml`, `status_map.yaml`, `workbooks.yaml`.) `CLAUDE.md`, `BUILD_PROMPT.md`, `docs/DECISIONS.md`, `docs/KNOWN_INCONSISTENCIES.md`, `fixtures/` (incl. `golden_cases.yaml`), the blueprint PDF and the real `config/*.yaml` were not available. `config/*.yaml` here are **placeholders** inferred from the brief; `CLAUDE.md` was written by me. Please supply the real files; INC-xx and D1-D15 tests cannot be named until then.
 2. Docker daemon unavailable in the build sandbox; `make up` falls back to `scripts/localpg.sh`.
