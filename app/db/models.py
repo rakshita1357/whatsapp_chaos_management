@@ -20,6 +20,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -244,6 +245,10 @@ class Event(Base):
     follow_up_due_to: Mapped[date | None] = mapped_column(Date)
     link_method: Mapped[str | None] = mapped_column(String(24))
     link_confidence: Mapped[float | None] = mapped_column(Float)
+    extractor_version: Mapped[str | None] = mapped_column(String(32))
+    payload: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, default=dict, server_default=text("'{}'::jsonb")
+    )
     created_at: Mapped[datetime] = _created()
 
 
@@ -392,6 +397,7 @@ class ReviewItem(Base):
     __tablename__ = "review_items"
     id: Mapped[uuid.UUID] = _pk()
     kind: Mapped[str] = mapped_column(String(40), index=True)
+    dedupe_key: Mapped[str | None] = mapped_column(String(256), index=True)
     severity: Mapped[str] = mapped_column(String(8), default="medium")
     group_id: Mapped[uuid.UUID | None] = _fk("groups.id", nullable=True)
     subject_refs: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)

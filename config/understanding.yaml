@@ -1,0 +1,6 @@
+# Message-understanding settings (build brief section 7). Tune against real cases only.
+extractor_version: "m3-1"       # bump to re-extract everything; outputs are keyed by message + version
+min_confidence: 0.5              # below this a classification goes to the review queue
+bundle_window_seconds: 120       # consecutive messages from one sender within this gap = one bundle
+bundle_short_text_chars: 120     # text-only messages up to this length can join a media bundle
+context_messages: 5              # previous messages shown to the model as context
