@@ -1,2 +1,7 @@
-# PLACEHOLDER SEED: people keyed by sender_key (E.164 digits) or display label.
+# PLACEHOLDER SEED. sender_key = E.164 digits. Aliases let a name-only export label resolve
+# to the same person (and therefore the same logical key) as their phone-number label.
 people: []
+# - sender_key: "918848991765"
+#   name: "Example Person"
+#   team: "Installation"
+#   aliases: ["Example P"]

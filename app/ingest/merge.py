@@ -28,6 +28,7 @@ from app.db.models import (
     ReviewItem,
     SourceMessage,
 )
+from app.entities.people import resolve_sender_keys
 from app.ingest.adapters.base import ParseResult
 from app.ingest.envelope import MessageEnvelope
 from app.ingest.keys import assign_logical_keys
@@ -231,6 +232,7 @@ def persist(
         return imp, stats
 
     envs = result.envelopes
+    resolve_sender_keys(session, envs)
     assign_logical_keys(group.id, envs)
     quotes: list[tuple[SourceMessage, str]] = []
     used_files: set[str] = set()
