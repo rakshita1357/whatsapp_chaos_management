@@ -32,6 +32,20 @@ Add these to the repo (push to `main` or tell me where they are):
   then in Neon run `select role, version_no, family_key, posted_at from workbook_imports order by posted_at;`
   and `select summary from workbook_diffs;`. No new migration is needed (tables already exist).
 
+## B3. New with M3 (do these on your machine)
+1. **Update the database schema** (two new migrations): `git pull origin claude/eager-sagan-vqh6gs`, `uv sync`, then
+   `uv run alembic upgrade head`. In the Neon SQL Editor, `select version_num from alembic_version;` should say `0003`.
+2. **Message understanding calls the AI model, which costs money.** Put your key in `.env` as `ANTHROPIC_API_KEY=...`
+   (create one in the Anthropic console, set a monthly spend limit first). Do not paste it into chat.
+   Acknowledgements ("ok", "noted") and bare pointers never reach the model, so they cost nothing.
+3. Try it on one group: `uv run python scripts/process_group.py "Tata Delight Meter Core Group"`.
+   It prints counts (events, observations, needs_review, tokens). To run in the background instead, add `--enqueue`
+   and start the worker in another terminal: `uv run python -m app.pipeline.worker`.
+4. Look at the results in Neon: `select kind, count(*) from review_items group by kind;` and
+   `select dimension, value, conflict_flag, count(*) from entity_state group by 1,2,3 order by 4 desc;`.
+5. Tell me three decisions (or "use your defaults"): who wins when chat and the sheet disagree (D07), what "verified"
+   means (D08), and whether tagging someone (@name) on a "not installed" message means assigning them.
+
 ## C. Needed from M3/M4 (not yet)
 - An **Anthropic API key** in `.env` as `ANTHROPIC_API_KEY=...` for live model runs (`make record`, `make eval-live`). Tests run without it using recorded responses. This is a paid service, so it needs your approval and a spend limit.
 - Optionally set `WCM_VISION_MODEL`, `WCM_TEXT_MODEL`, `WCM_ASSISTANT_MODEL` (defaults are in `.env.example`).

@@ -140,6 +140,7 @@ class SourceMessage(Base):
     sender_label: Mapped[str | None] = mapped_column(String(256))
     sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     sent_at_precision: Mapped[str] = mapped_column(String(8), default="minute")
+    source_line: Mapped[int | None] = mapped_column(Integer)  # order within a minute (file order)
     raw_text: Mapped[str | None] = mapped_column(Text)
     normalized_text: Mapped[str | None] = mapped_column(Text)
     message_type: Mapped[str] = mapped_column(String(16), default="text")

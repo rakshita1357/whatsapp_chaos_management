@@ -1,5 +1,9 @@
-# PROVISIONAL defaults (decision D07 is open). Higher index wins only on a tie of recency.
-# Never overwrite: conflicts are flagged, see build brief 8.7.
+# PROVISIONAL (decision D07 is open): which source type wins per dimension when sources disagree.
+# The FIRST listed source kind is the highest priority. Nothing is ever overwritten: the loser stays
+# as an observation and the disagreement raises a conflict flag + review item (build brief 8.7).
+# source kinds: human (a review decision), attachment (photo/form), message (chat), workbook_cell
 dimension_precedence:
   installation: [human, attachment, message, workbook_cell]
+  activation: [human, attachment, message, workbook_cell]
   readiness: [human, workbook_cell, message, attachment]
+  readiness_listed: [human, workbook_cell, message, attachment]

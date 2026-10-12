@@ -16,3 +16,11 @@ export (txt/md/zip) -> adapter -> MessageEnvelope -> persist -> jobs queue (Post
 - **Database in dev:** `docker compose up db`; where Docker is unavailable `scripts/localpg.sh` runs a local Postgres 16.
 
 See `docs/PROGRESS.md` for status and open questions.
+
+## Understanding pipeline (M3)
+`process_group` walks a group's messages in file order: build evidence bundles -> rules (`understand/rules.py`) ->
+(model, only if rules did not decide) -> `validate_classification` -> resolve entity (`entities/resolve.py`) -> link
+thread (`understand/reply_links.py`) -> `commit_bundle` (`state/observations.py`) -> `derive_entities` +
+`sync_conflicts`. Observations record what a source said; `entity_state` is rebuilt from them deterministically and
+never edited. Uncertainty becomes a `review_item`; the event is stored with `entity_id = NULL` until a human decides.
+Jobs: `pipeline/jobs.py` (Postgres queue) and `pipeline/worker.py` (`python -m app.pipeline.worker`).

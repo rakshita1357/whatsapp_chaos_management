@@ -70,4 +70,35 @@ def func_lower(col: Any) -> Any:
     return func.lower(col)
 
 
-__all__ = ["seed_people", "resolve_sender_keys", "sender_key_for"]
+__all__ = ["seed_people", "resolve_sender_keys", "resolve_persons", "sender_key_for"]
+
+
+def resolve_persons(session: Session, mentions: list[tuple[str, str]]) -> list[Person]:
+    """Mentions (rendering, kind 'name'|'phone') -> known people. Unknown mentions are ignored."""
+    found: dict[Any, Person] = {}
+    for value, kind in mentions:
+        if kind == "phone":
+            digits = "".join(ch for ch in value if ch.isdigit())
+            p = (
+                session.scalar(select(Person).where(Person.sender_key == digits))
+                if digits
+                else None
+            )
+            if p is None and len(digits) == 10:
+                p = session.scalar(select(Person).where(Person.sender_key == "91" + digits))
+        else:
+            label = (normalize_text(value) or "").casefold()
+            if not label:
+                continue
+            p = session.scalar(
+                select(Person)
+                .join(PersonAlias, PersonAlias.person_id == Person.id, isouter=True)
+                .where(
+                    (func_lower(PersonAlias.alias) == label)
+                    | (func_lower(Person.name) == label)
+                    | (func_lower(Person.display_label) == label)
+                )
+            )
+        if p is not None:
+            found[p.id] = p
+    return list(found.values())

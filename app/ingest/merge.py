@@ -293,6 +293,7 @@ def persist(
                 sender_label=env.sender_label,
                 sent_at=env.sent_at,
                 sent_at_precision=env.sent_at_precision,
+                source_line=env.source_line,
                 raw_text=env.raw_text,
                 normalized_text=env.normalized_text,
                 message_type=env.message_type,

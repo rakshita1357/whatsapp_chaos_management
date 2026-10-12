@@ -76,7 +76,40 @@ The first real import against Neon was very slow: ~9,400 queries for 1,180 rows 
 network). Entities/identifiers are now cached in memory and written in batches, and `entity_id` is set with one
 executemany: ~20 queries / 3.5 s locally. Guarded by a query-count test.
 
+## M3 Understanding + state: done against synthetic chats and a scripted model (live model untested)
+Built: model provider layer (`ModelProvider`; `AnthropicProvider` using structured JSON output; `RecordedProvider` /
+`RecordingProvider` cassettes), rules (codes from config, acknowledgement lexicon, pointers, status keywords incl.
+Hinglish, mentions, aggregate hints), model classification with a strict schema + Hinglish few-shots, a validator that
+enforces the invariants (acks never change status, aggregates never create events, status needs a text span),
+evidence bundles (album / image + short caption / 8 images + pointer), reply-link scoring with weights in
+`config/reply_weights.yaml`, entity resolution (Tata division/dealer/town; Maruti company+channel+town outlets),
+the commit step (events, observations, aggregate claims, follow-up windows from ETA text, issue lifecycle:
+ack moves open -> acknowledged only), derived state (installation ladder, D6 counting, precedence, conflict flags),
+conflicts (stale_source, contradiction, ready_but_installed: INC-50), review items, and a Postgres job queue
+(SKIP LOCKED, exponential backoff, stale-lock release) with a worker. Re-running a bundle replaces only its own outputs.
+
+Golden constraints (7.3), on synthetic scenarios modelled on the brief: native-only "Tv installed" is never auto-linked
+(goes to review); "Tv installed in lounge" ranks Himatnagar first (review) or auto-links to it when the sender was
+assigned and acknowledged; renovation ranks Chokidhani first, never Himatnagar; a 2,000-case randomized check proves no
+link is automatic without score >= 0.80 AND margin >= 0.25. Auto-link precision on the synthetic cases: 1.0, wrong
+auto-links: 0. **These numbers are NOT the real-fixture precision/recall the brief asks for; weights are untuned.**
+
+Decisions I made that you may want to change (all in config or one function):
+- A mention on a NOT-done report ("NO TV INSTALLED @Ravi check") assigns that person; on a positive report it does not.
+- An acknowledgement links to the immediately preceding message from someone else within 10 minutes; a bare pointer links
+  to the immediately preceding message. Both are marked `inferred` (they never change a status).
+- Source precedence per dimension is in `config/precedence.yaml` (provisional D07: chat beats the sheet for
+  installation; the sheet beats chat for readiness). "installed_with_evidence" currently = any attachment on the
+  bundle; M4 will require real image evidence. "verified" only comes from a human action (D08 still open).
+- Maruti outlets are created provisionally from chat (no master list exists).
+
+Not verified / not done: the AnthropicProvider has only been tested with a fake client (no API key in this sandbox), so
+real-model behaviour, cost and the optional server-side refusal fallback are unproven. Not built yet: vision/attachment
+evidence (M4), review actions that apply a decision (M5), category proposals (M5), assistant (M6). New migrations 0002
+(events.payload, review dedupe key) and 0003 (messages.source_line, needed to keep file order within a minute).
+
 ## Open questions for the owner
+0. **Owner decisions needed for M3:** D07 (which source wins per dimension), D08 (what "verified" means), and whether a mention on a status message should count as an assignment.
 1. **The repo was empty.** (M2 placeholders added: `config/header_aliases.yaml`, `status_map.yaml`, `workbooks.yaml`.) `CLAUDE.md`, `BUILD_PROMPT.md`, `docs/DECISIONS.md`, `docs/KNOWN_INCONSISTENCIES.md`, `fixtures/` (incl. `golden_cases.yaml`), the blueprint PDF and the real `config/*.yaml` were not available. `config/*.yaml` here are **placeholders** inferred from the brief; `CLAUDE.md` was written by me. Please supply the real files; INC-xx and D1-D15 tests cannot be named until then.
 2. Docker daemon unavailable in the build sandbox; `make up` falls back to `scripts/localpg.sh`.
 3. Branch: work is on `claude/eager-sagan-vqh6gs` (same name as the session branch).
