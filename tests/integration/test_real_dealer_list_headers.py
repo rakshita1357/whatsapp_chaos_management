@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 from pathlib import Path
 
-from sqlalchemy import select
+from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session
 
 from app.db import models as m
@@ -143,3 +143,38 @@ def test_master_with_implementation_plan_sheet_stays_master_and_reimport(
     )
     assert again.created is True and again.import_ is not None and again.import_.role == "MASTER"
     assert db.scalar(select(func.count()).select_from(m.AuditLog)) == 1
+
+
+def test_master_import_makes_a_bounded_number_of_queries(
+    db: Session, tmp_path: Path, engine: Engine
+) -> None:
+    """Regression guard: the first version made ~9,400 queries for 1,180 rows, which took many
+    minutes against a remote database. Query count must not grow with the number of rows."""
+    from sqlalchemy import event
+
+    rows = [REAL_HEADERS] + [
+        mk(
+            f"300A{i:03d}-Sv&Pa-Town{i}-Abc",
+            f"Town{i}",
+            "Done" if i % 2 else "Pending",
+            inst="Planned",
+        )
+        for i in range(300)
+    ]
+    p = make_xlsx(tmp_path / "TMS_Delight_09-10-2026.xlsx", {"Dealer List": rows})
+    count = [0]
+
+    def tick(*_a: object, **_k: object) -> None:
+        count[0] += 1
+
+    event.listen(engine, "before_cursor_execute", tick)
+    try:
+        res = import_workbook(
+            db, p, filename=p.name, posted_at=datetime(2026, 10, 9, 10, tzinfo=UTC), cfg=CFG,
+            derived_dir=tmp_path / "d",
+        )  # fmt: skip
+        db.flush()
+    finally:
+        event.remove(engine, "before_cursor_execute", tick)
+    assert res.stats["master"]["divisions"] == 300
+    assert count[0] < 120, f"{count[0]} statements for 300 rows: per-row queries are back"

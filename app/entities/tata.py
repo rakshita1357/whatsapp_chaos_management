@@ -15,7 +15,12 @@ from sqlalchemy.orm import Session
 
 from app.core.config import load_yaml
 from app.db.models import Entity, EntityIdentifier, ReviewItem, WorkbookRow
-from app.entities.registry import add_identifier, upsert_entity
+from app.entities.registry import (
+    add_identifier,
+    load_entity_cache,
+    load_identifier_keys,
+    upsert_entity,
+)
 from app.workbooks.normalize import division_key
 from app.workbooks.settings import WorkbookConfig
 
@@ -61,6 +66,8 @@ def load_master_rows(
     marker = str(cfg.settings.get("new_setup_marker", "new setup")).casefold()
     dealer_re = dealer_code_regex(cfg)
     dealers: dict[str, Entity] = {}
+    cache = load_entity_cache(session, client_id, ("dealer_code", "division"))
+    known = load_identifier_keys(session, [e.id for e in cache.values()])
     first_row_for_key: dict[str, WorkbookRow] = {}
     divisions_by_dealer: dict[str, list[tuple[str, str, Entity]]] = {}
     conflicted: set[str] = set()
@@ -88,6 +95,7 @@ def load_master_rows(
                 display_name=raw_div,
                 attributes=attrs,
                 provisional=True,
+                cache=cache,
             )
             if created:
                 stats.divisions += 1
@@ -131,9 +139,12 @@ def load_master_rows(
                 display_name=n.get("dealer_name") or str(dealer),
                 attributes={"state": n.get("state"), "region": n.get("region")},
                 provisional=not dealer_re.match(str(dealer)),
+                cache=cache,
             )
             stats.dealers += int(created)
-            add_identifier(session, d_ent.id, "dealer_code", str(dealer), str(dealer), "master")
+            add_identifier(
+                session, d_ent.id, "dealer_code", str(dealer), str(dealer), "master", known
+            )
             dealers[str(dealer)] = d_ent
         if raw_div is None:
             stats.entity_by_row[row.id] = d_ent.id
@@ -165,11 +176,7 @@ def load_master_rows(
                         note="Same division key appears twice with different content (INC-24)",
                     )
                 )
-            existing = session.scalar(
-                select(Entity).where(Entity.id == stats.entity_by_row[existing_row.id])
-            )
-            if existing is not None:
-                stats.entity_by_row[row.id] = existing.id
+            stats.entity_by_row[row.id] = stats.entity_by_row[existing_row.id]
             continue
         first_row_for_key[key] = row
         div_ent, created = upsert_entity(
@@ -181,6 +188,7 @@ def load_master_rows(
             parent_id=d_ent.id,
             attributes=attrs,
             provisional=placeholder,
+            cache=cache,
         )
         if created:
             stats.divisions += 1
@@ -199,7 +207,7 @@ def load_master_rows(
                     )
                 )
         if not placeholder:
-            add_identifier(session, div_ent.id, "division_code", raw_div, key, "master")
+            add_identifier(session, div_ent.id, "division_code", raw_div, key, "master", known)
         stats.entity_by_row[row.id] = div_ent.id
         divisions_by_dealer.setdefault(str(dealer), []).append((key, str(city or ""), div_ent))
 

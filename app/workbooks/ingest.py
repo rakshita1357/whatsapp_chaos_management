@@ -8,7 +8,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
 from app.core.blobstore import sha256_file
@@ -102,6 +102,17 @@ def _parse_sheet(sheet: Any, cfg: WorkbookConfig, role_hint: str) -> _ParsedShee
             {"row_number": offset, "raw": raw, "norm": norm, "types": types, "issues": issues}
         )
     return ps
+
+
+def _bulk_set_entities(
+    session: Session, rows: list[WorkbookRow], mapping: dict[uuid.UUID, uuid.UUID]
+) -> None:
+    """One executemany instead of an UPDATE round trip per spreadsheet row."""
+    params = [{"id": r.id, "entity_id": mapping[r.id]} for r in rows if r.id in mapping]
+    for r in rows:
+        r.__dict__["entity_id"] = mapping.get(r.id)  # keep the in-memory objects in sync
+    if params:
+        session.execute(update(WorkbookRow), params)
 
 
 def _derive_dealer_code(norm: dict[str, Any]) -> None:
@@ -255,14 +266,14 @@ def import_workbook(
             ms: MasterLoadStats = load_master_rows(
                 session, prows, client_id, cfg, headers, group_id
             )
-            for row in prows:
-                row.entity_id = ms.entity_by_row.get(row.id)
+            _bulk_set_entities(session, prows, ms.entity_by_row)
             stats["master"] = ms.as_json()
         else:
             keys = [r.row_key for r in prows if r.row_key]
             found = find_division_entities(session, client_id, keys)
-            for row in prows:
-                row.entity_id = found.get(row.row_key or "")
+            _bulk_set_entities(
+                session, prows, {r.id: found[r.row_key] for r in prows if r.row_key in found}
+            )
             stats["unmatched_rows"] = sum(1 for r in prows if r.entity_id is None)
         stats["observations"] = _write_observations(session, imp, primary, prows, role, headers)
     if primary is not None:

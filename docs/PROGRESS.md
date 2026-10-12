@@ -71,6 +71,11 @@ Real master confirmed to need the pivot sanitizer (`opened_via: sanitized`).
 - Fixed: `scripts/import_workbook.py --replace` was documented but its flag was never defined (silent edit failure);
   now defined, and it also removes the old import's open review items.
 
+### Performance fix (real master import)
+The first real import against Neon was very slow: ~9,400 queries for 1,180 rows (12 s locally, many minutes over the
+network). Entities/identifiers are now cached in memory and written in batches, and `entity_id` is set with one
+executemany: ~20 queries / 3.5 s locally. Guarded by a query-count test.
+
 ## Open questions for the owner
 1. **The repo was empty.** (M2 placeholders added: `config/header_aliases.yaml`, `status_map.yaml`, `workbooks.yaml`.) `CLAUDE.md`, `BUILD_PROMPT.md`, `docs/DECISIONS.md`, `docs/KNOWN_INCONSISTENCIES.md`, `fixtures/` (incl. `golden_cases.yaml`), the blueprint PDF and the real `config/*.yaml` were not available. `config/*.yaml` here are **placeholders** inferred from the brief; `CLAUDE.md` was written by me. Please supply the real files; INC-xx and D1-D15 tests cannot be named until then.
 2. Docker daemon unavailable in the build sandbox; `make up` falls back to `scripts/localpg.sh`.
