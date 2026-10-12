@@ -11,5 +11,5 @@ possible_duplicate_city_score: 88
 ready_values: [ready]
 # First matching group (in this order) classifies a changed row in diff summaries.
 diff_column_groups:
-  timeline: [site_ready_date, planned_install_date]
+  timeline: [site_ready_date, planned_install_date, expected_timeline]
   dispatch: [dispatch_date, dispatch_status]

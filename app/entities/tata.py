@@ -74,7 +74,32 @@ def load_master_rows(
             k: n.get(k)
             for k in ("city", "hub_city", "state", "pin", "region", "phase", "dealer_name")
         }
-        if not dealer:
+        placeholder = bool(raw_div) and marker in str(raw_div).casefold()
+        if not dealer and not placeholder:
+            continue
+        if not dealer:  # 'New Setup' row with no dealer code: provisional division, no parent
+            key = f"newsetup||{str(city or '').casefold()}|{row_fingerprint(n)}"
+            div_ent, created = upsert_entity(
+                session,
+                "division",
+                client_id,
+                key,
+                display_name=raw_div,
+                attributes=attrs,
+                provisional=True,
+            )
+            if created:
+                stats.divisions += 1
+                stats.provisional += 1
+                session.add(
+                    ReviewItem(
+                        kind="entity_match_ambiguous",
+                        group_id=group_id,
+                        subject_refs={"entity_id": str(div_ent.id), "workbook_row_id": str(row.id)},
+                        note="'New Setup' placeholder with no dealer code",
+                    )
+                )
+            stats.entity_by_row[row.id] = div_ent.id
             continue
         if not dealer_re.match(str(dealer)):
             stats.invalid_dealer_codes += 1
@@ -104,7 +129,6 @@ def load_master_rows(
         if raw_div is None:
             stats.entity_by_row[row.id] = d_ent.id
             continue
-        placeholder = marker in raw_div.casefold()
         if placeholder:
             key = f"newsetup|{dealer}|{str(city or '').casefold()}|{row_fingerprint(n)}"
         else:

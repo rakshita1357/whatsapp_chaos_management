@@ -97,10 +97,22 @@ def _parse_sheet(sheet: Any, cfg: WorkbookConfig, role_hint: str) -> _ParsedShee
                             "raw": cell.raw,
                         }
                     )
+        _derive_dealer_code(norm)
         ps.rows.append(
             {"row_number": offset, "raw": raw, "norm": norm, "types": types, "issues": issues}
         )
     return ps
+
+
+def _derive_dealer_code(norm: dict[str, Any]) -> None:
+    """The real Dealer List has no Dealer Code column: it is the prefix of the Division Code
+    (e.g. 3000060-Sv&Pa-Derikplaza-DetRik -> 3000060). Placeholder rows get none."""
+    div = norm.get("division_code")
+    if norm.get("dealer_code") or not div or "new setup" in str(div).casefold():
+        return
+    prefix = str(div).split("-")[0].strip()
+    if prefix:
+        norm["dealer_code"] = prefix
 
 
 def _row_key(norm: dict[str, Any], raw: dict[str, Any]) -> str | None:
@@ -155,7 +167,11 @@ def import_workbook(
     data_sheets = [p for p in parsed if p.kind == "data_table"]
     primary = max(data_sheets, key=lambda p: len(p.rows), default=None)
     only_pivots = primary is None and any(p.kind == "pivot_summary" for p in parsed)
-    readiness = [r["norm"].get("readiness") for r in primary.rows] if primary else []
+    readiness = (
+        [r["norm"].get("readiness") or r["norm"].get("readiness__text") for r in primary.rows]
+        if primary
+        else []
+    )
     role = infer_role(
         [p.name for p in parsed], len(primary.rows) if primary else 0, readiness, only_pivots, cfg
     )

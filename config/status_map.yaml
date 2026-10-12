@@ -1,4 +1,5 @@
-# PLACEHOLDER SEED. role -> field -> raw value (casefolded) -> canonical value.
+# PARTLY PLACEHOLDER: only 'Ready To Deploy' is confirmed. Unlisted values are flagged for review
+# (unmapped_status_value) so the real value list can be added here. role -> field -> raw value (casefolded) -> canonical value.
 # Role ANY is the fallback when a role-specific entry is missing.
 ANY:
   readiness:
