@@ -30,6 +30,11 @@ def main() -> None:
     ap.add_argument(
         "--client", default=None, help="client key (default from config/workbooks.yaml)"
     )
+    ap.add_argument(
+        "--replace",
+        action="store_true",
+        help="delete the existing import of this exact file first, then import it again",
+    )
     a = ap.parse_args()
     posted = datetime.fromisoformat(a.posted_at)
     if posted.tzinfo is None:

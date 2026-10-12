@@ -12,18 +12,21 @@ from tests.integration.test_workbook_ingest import CFG
 from tests.xlsx_helpers import make_xlsx
 
 REAL_HEADERS = [
-    "Date", "Dealer Name", "Division Code", "City", "Hub Locations", "SPOC - Name",
-    "SPOC - Contact", "Address1", "Address2", "Address3", "Pincode", "Contacted", "Readiness",
-    "Remark", "Installation Planned Date", "Installation Status", "Phase",
-    "Expecting Timeline for Installation", "Dispatch Date", "Status", "Albersons Remakrs",
+    "Date", "Sr. No.", "New Region", "Dealer Code", "Dealer Name", "Division Code", "City",
+    "Hub Locations", "SPOC - Name", "SPOC - Contact", "Address1", "Address2", "Address3",
+    "Pincode", "State", "Contacted", "Readiness", "Remark", "Installation Planned Date",
+    "Installation Status", "Phase", "Expecting Timeline for Installation", "Dispatch Date",
+    "Status", "Albersons Remakrs",
 ]  # fmt: skip
 
 
 def mk(div: str, city: str, readiness: str, **kw: object) -> list[object]:
+    dealer = kw.get("dealer", div.split("-")[0] if "-" in div else None)
     return [
-        "09-10-2026", "Test Motors Pvt. Ltd.", div, city, None, "Person A", 9000000000 + len(div),
-        "Addr 1", None, None, "682001", "Yes", readiness, None, kw.get("plan"), kw.get("inst"),
-        "Phase 1", kw.get("timeline"), kw.get("dispatch"), kw.get("status"), None,
+        None, 1, "South", dealer, "Test Motors Pvt. Ltd.", div, city, None, "Person A",
+        9000000000, "Addr 1", None, None, "682001", "Kerala", kw.get("contacted", "Yes"),
+        readiness, None, kw.get("plan"), kw.get("inst"), "Phase 1", kw.get("timeline"),
+        kw.get("dispatch"), kw.get("status"), None,
     ]  # fmt: skip
 
 
@@ -48,6 +51,15 @@ def test_real_headers_all_map_and_dealer_code_comes_from_division(
         mk("300A100-Sv&Pa-Ernakulam-GokUla", "Ernakulam", "Not Ready", status="Dispatched"),
         mk("New Setup", "Kollam", "Not Ready"),
         mk("300A42-Sv&Pa-Bad-BadBad", "Kannur", "Ready To Deploy"),
+        # blank Dealer Code cell: derived from the division prefix; odd "Contacted" text is flagged
+        mk(
+            "300A200-Sv&Pa-Xtown-Abc",
+            "Xtown",
+            "Done",
+            dealer=None,
+            inst="Completed",
+            contacted="standalone bodyshop",
+        ),
     ]
     p = make_xlsx(tmp_path / "TMS_Delight_09-10-2026.xlsx", {"Dealer List": rows})
     res = import_workbook(
@@ -65,7 +77,7 @@ def test_real_headers_all_map_and_dealer_code_comes_from_division(
     assert sheet is not None and sheet.header_row == 1
     cols = sheet.column_mapping["columns"]
     unknown = [c["header_raw"] for c in cols if c["method"] != "exact"]
-    assert unknown == []  # all 21 real headers map exactly
+    assert unknown == []  # all 25 real headers map exactly
     canon = {c["header_raw"]: c["canonical"] for c in cols}
     assert canon["Hub Locations"] == "hub_city" and canon["Pincode"] == "pin"
     assert canon["Installation Planned Date"] == "planned_install_date"
@@ -74,7 +86,14 @@ def test_real_headers_all_map_and_dealer_code_comes_from_division(
     dealers = {
         e.canonical_key for e in db.scalars(select(m.Entity).where(m.Entity.type == "dealer_code"))
     }
-    assert dealers == {"3000060", "3085780", "300C030", "300A100", "300A42"}
+    assert dealers == {"3000060", "3085780", "300C030", "300A100", "300A42", "300A200"}
+    assert canon["New Region"] == "region" and canon["Dealer Code"] == "dealer_code"
+    inst = db.scalars(select(m.Observation).where(m.Observation.dimension == "installation")).all()
+    assert [(o.value, o.polarity, o.source_kind) for o in inst] == [
+        ("completed", "positive", "workbook_cell")
+    ]
+    unm = db.scalars(select(m.ReviewItem).where(m.ReviewItem.kind == "unmapped_status_value")).all()
+    assert [u.proposed_value["raw"] for u in unm] == ["standalone bodyshop"]
     bad = db.scalars(select(m.ReviewItem).where(m.ReviewItem.kind == "invalid_value")).all()
     assert [b.subject_refs["field"] for b in bad] == ["dealer_code"]  # only 300A42 is invalid
     free = db.scalar(select(m.WorkbookRow).where(m.WorkbookRow.row_number == 3))

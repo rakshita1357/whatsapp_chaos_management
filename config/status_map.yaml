@@ -1,13 +1,23 @@
-# PARTLY PLACEHOLDER: only 'Ready To Deploy' is confirmed. Unlisted values are flagged for review
-# (unmapped_status_value) so the real value list can be added here. role -> field -> raw value (casefolded) -> canonical value.
-# Role ANY is the fallback when a role-specific entry is missing.
+# Built from the distinct values found in the real TMS_Delight_09-10-2026.xlsx (Dealer List).
+# role -> field -> raw value (casefolded) -> canonical value. Role ANY is the fallback.
+# Values not listed here are NOT guessed: they are flagged for review (unmapped_status_value).
 ANY:
   readiness:
     "ready to deploy": ready
     "ready": ready
-    "not ready": not_ready
-    "pending": not_ready
-  dispatch_status:
-    "dispatched": dispatched
+    "done": done          # 303 rows in the master; assumed to mean the site/installation work is done
     "pending": pending
-    "not dispatched": pending
+    "not ready": not_ready
+  installation_status:
+    "completed": completed
+    "pending to installed": pending_install
+    "planned": planned
+  contacted:
+    "yes": yes
+    "no": no
+  dispatch_status:
+    "pending": pending
+    "issue": issue
+    "not dispatched": not_dispatched
+    "phase-1": phase_1    # odd value in the Status column (5 rows); kept as its own value
+    "dispatched": dispatched

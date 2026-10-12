@@ -236,8 +236,8 @@ def import_workbook(
             objs.append(obj)
         session.flush()
         rows_by_sheet[p.name] = objs
-        _row_review_items(session, group_id, p, objs)
-    _header_review_items(session, group_id, parsed)
+        _row_review_items(session, group_id, p, objs, imp.id)
+    _header_review_items(session, group_id, parsed, imp.id)
     _renumber_versions(session, fam)
 
     stats: dict[str, Any] = {
@@ -274,7 +274,7 @@ def import_workbook(
 
 # ----------------------------------------------------------------------- review items
 def _header_review_items(
-    session: Session, group_id: uuid.UUID | None, parsed: list[_ParsedSheet]
+    session: Session, group_id: uuid.UUID | None, parsed: list[_ParsedSheet], import_id: uuid.UUID
 ) -> None:
     for p in parsed:
         for m in p.mapping:
@@ -284,7 +284,11 @@ def _header_review_items(
                 ReviewItem(
                     kind="unknown_header",
                     group_id=group_id,
-                    subject_refs={"sheet": p.name, "header": m.header_raw},
+                    subject_refs={
+                        "sheet": p.name,
+                        "header": m.header_raw,
+                        "workbook_import_id": str(import_id),
+                    },
                     proposed_value={"canonical": m.canonical, "score": m.score, "method": m.method},
                     note="Unknown header: values are stored raw (INC-43)"
                     if m.method == "unknown"
@@ -294,7 +298,11 @@ def _header_review_items(
 
 
 def _row_review_items(
-    session: Session, group_id: uuid.UUID | None, p: _ParsedSheet, rows: list[WorkbookRow]
+    session: Session,
+    group_id: uuid.UUID | None,
+    p: _ParsedSheet,
+    rows: list[WorkbookRow],
+    import_id: uuid.UUID,
 ) -> None:
     seen_enum: set[tuple[str, str]] = set()
     for row in rows:
@@ -313,6 +321,7 @@ def _row_review_items(
                     group_id=group_id,
                     subject_refs={
                         "workbook_row_id": str(row.id),
+                        "workbook_import_id": str(import_id),
                         "sheet": p.name,
                         "row_number": row.row_number,
                         "column": issue["column"],
@@ -362,11 +371,29 @@ def _write_observations(
                     entity_id=row.entity_id,
                     dimension="readiness",
                     value=readiness,
-                    polarity="positive" if readiness == "ready" else "negative",
+                    polarity="positive" if readiness in ("ready", "done") else "negative",
                     observed_at=imp.posted_at,
                     effective_date=eff,
                     source_kind="workbook_cell",
                     source_ref={**ref, "column": headers.get("readiness")},
+                    extractor=EXTRACTOR,
+                    extractor_version=EXTRACTOR_VERSION,
+                    confidence=1.0,
+                )
+            )
+            n += 1
+        inst = row.normalized.get("installation_status")
+        if inst:  # the sheet's own installation column: a claim by the workbook, never "verified"
+            session.add(
+                Observation(
+                    entity_id=row.entity_id,
+                    dimension="installation",
+                    value=inst,
+                    polarity="positive" if inst == "completed" else "negative",
+                    observed_at=imp.posted_at,
+                    effective_date=eff,
+                    source_kind="workbook_cell",
+                    source_ref={**ref, "column": headers.get("installation_status")},
                     extractor=EXTRACTOR,
                     extractor_version=EXTRACTOR_VERSION,
                     confidence=1.0,
@@ -589,6 +616,17 @@ def delete_workbook_import(session: Session, imp: WorkbookImport, reason: str) -
     session.execute(
         text("DELETE FROM observations WHERE source_ref->>'workbook_import_id' = :i"),
         {"i": str(imp.id)},
+    )
+    session.execute(
+        text(
+            "DELETE FROM review_items WHERE status = 'open' AND ("
+            " subject_refs->>'workbook_import_id' = :i OR ("
+            "  subject_refs->>'workbook_import_id' IS NULL"
+            "  AND kind IN ('unknown_header','invalid_value','unmapped_status_value',"
+            "   'duplicate_division_conflict','possible_duplicate_entity','entity_match_ambiguous')"
+            "  AND created_at >= :t0 AND created_at <= :t1))"
+        ),
+        {"i": str(imp.id), "t0": imp.created_at, "t1": imp.created_at + timedelta(minutes=5)},
     )
     for d in session.scalars(
         select(WorkbookDiff).where(

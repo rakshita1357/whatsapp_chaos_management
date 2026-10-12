@@ -55,6 +55,7 @@ def load_master_rows(
     cfg: WorkbookConfig,
     headers: dict[str, str],
     group_id: uuid.UUID | None = None,
+    import_id: uuid.UUID | None = None,
 ) -> MasterLoadStats:
     stats = MasterLoadStats()
     marker = str(cfg.settings.get("new_setup_marker", "new setup")).casefold()
@@ -95,7 +96,11 @@ def load_master_rows(
                     ReviewItem(
                         kind="entity_match_ambiguous",
                         group_id=group_id,
-                        subject_refs={"entity_id": str(div_ent.id), "workbook_row_id": str(row.id)},
+                        subject_refs={
+                            "workbook_import_id": str(import_id) if import_id else None,
+                            "entity_id": str(div_ent.id),
+                            "workbook_row_id": str(row.id),
+                        },
                         note="'New Setup' placeholder with no dealer code",
                     )
                 )
@@ -107,7 +112,11 @@ def load_master_rows(
                 ReviewItem(
                     kind="invalid_value",
                     group_id=group_id,
-                    subject_refs={"workbook_row_id": str(row.id), "field": "dealer_code"},
+                    subject_refs={
+                        "workbook_import_id": str(import_id) if import_id else None,
+                        "workbook_row_id": str(row.id),
+                        "field": "dealer_code",
+                    },
                     proposed_value={"raw": dealer},
                     note=f"Dealer code {dealer!r} does not match the expected pattern",
                 )
@@ -142,7 +151,10 @@ def load_master_rows(
                     ReviewItem(
                         kind="duplicate_division_conflict",
                         group_id=group_id,
-                        subject_refs={"division_key": key},
+                        subject_refs={
+                            "workbook_import_id": str(import_id) if import_id else None,
+                            "division_key": key,
+                        },
                         candidates=[
                             {
                                 "workbook_row_id": str(existing_row.id),
@@ -178,7 +190,11 @@ def load_master_rows(
                     ReviewItem(
                         kind="entity_match_ambiguous",
                         group_id=group_id,
-                        subject_refs={"entity_id": str(div_ent.id), "workbook_row_id": str(row.id)},
+                        subject_refs={
+                            "workbook_import_id": str(import_id) if import_id else None,
+                            "entity_id": str(div_ent.id),
+                            "workbook_row_id": str(row.id),
+                        },
                         note="'New Setup' placeholder: needs a real division code",
                     )
                 )
@@ -203,7 +219,10 @@ def load_master_rows(
                         ReviewItem(
                             kind="possible_duplicate_entity",
                             group_id=group_id,
-                            subject_refs={"dealer_code": dealer},
+                            subject_refs={
+                                "workbook_import_id": str(import_id) if import_id else None,
+                                "dealer_code": dealer,
+                            },
                             candidates=[
                                 {"entity_id": str(ea.id), "division_key": ka, "city": ca},
                                 {"entity_id": str(eb.id), "division_key": kb, "city": cb},

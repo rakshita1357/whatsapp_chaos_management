@@ -11,7 +11,7 @@ fields:
   city:          {type: text,  aliases: ["city", "town", "location"]}
   hub_city:      {type: text,  aliases: ["hub city", "hub", "hub locations", "hub location"]}
   state:         {type: text,  aliases: ["state"]}
-  region:        {type: text,  aliases: ["region", "zone"]}
+  region:        {type: text,  aliases: ["region", "zone", "new region"]}
   pin:           {type: pin,   aliases: ["pin", "pincode", "pin code", "postal code"]}
   contact_name:  {type: text,  aliases: ["contact person", "contact name", "spoc", "spoc name"]}
   contact_phone: {type: phone, aliases: ["contact no", "contact number", "mobile", "phone", "spoc contact"]}
@@ -20,13 +20,13 @@ fields:
   site_ready_date:    {type: date, aliases: ["site ready date", "readiness date"]}
   planned_install_date: {type: date, aliases: ["planned installation date", "installation planned date", "install plan date", "installation date"]}
   dispatch_date: {type: date,  aliases: ["dispatch date", "dispatched on"]}
-  dispatch_status: {type: text, aliases: ["dispatch status", "device dispatch", "status"]}  # real sheet: "Status" after Dispatch Date (assumed dispatch status; confirm)
+  dispatch_status: {type: enum, aliases: ["dispatch status", "device dispatch", "status"]}  # real sheet: "Status" after Dispatch Date (assumed dispatch status; owner agreed)
   remarks:       {type: text,  aliases: ["remarks", "remark", "comments"]}
-  record_date:   {type: date, aliases: ["date"]}   # first column of the real sheet; meaning to be confirmed
+  record_date:   {type: date, aliases: ["date"]}   # first column of the real sheet; mostly blank, filled with the date a row was added/updated (assumed)
   address1:      {type: text, aliases: ["address1", "address 1"]}
   address2:      {type: text, aliases: ["address2", "address 2"]}
   address3:      {type: text, aliases: ["address3", "address 3"]}
-  contacted:     {type: text, aliases: ["contacted"]}
-  installation_status: {type: text, aliases: ["installation status", "install status"]}
+  contacted:     {type: enum, aliases: ["contacted"]}
+  installation_status: {type: enum, aliases: ["installation status", "install status"]}
   expected_timeline: {type: date, aliases: ["expecting timeline for installation", "expected timeline for installation"]}
   client_remarks: {type: text, aliases: ["albersons remakrs", "albertsons remarks", "albersons remarks"]}  # sic: header is misspelled in the sheet

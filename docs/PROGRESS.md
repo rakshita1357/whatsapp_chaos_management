@@ -57,6 +57,20 @@ Timeline for Installation; dispatch columns = Dispatch Date + Status. Status val
 IMPLEMENTATION_PLAN; now only the primary sheet (preferred: `Dealer List`) decides the role.
 Real master confirmed to need the pivot sanitizer (`opened_via: sanitized`).
 
+### Findings from the real master (via scripts/inspect_workbook.py output)
+- Sheets: `Summary` (visible pivot), `implementation Plan` (222 rows, all "Ready To Deploy", 21 cols, no Hub/Date/Status),
+  `Dealer List` (1180 rows, 25 cols incl. Sr. No., New Region, Dealer Code), hidden `Sheet1` (pivot) and `Sheet2` (helper, 42 cols).
+- Plain open fails with `TypeError: Nested.from_tree() ...` (pivot cache), so the sanitizer is required: confirmed on the real file.
+- Real values now mapped in `config/status_map.yaml`: Readiness {Ready To Deploy, Done, Pending}; Installation Status
+  {Completed, Pending to installed, Planned}; Status {Pending, ISSUE, NOT Dispatched, PHASE-1}; Contacted {Yes/yes}.
+  `standalone bodyshop` in Contacted and the bare `Done` meaning are flagged/assumed (assumption: Done = work done).
+- Workbook `Installation Status` is recorded as an `installation` observation (workbook claim, never "verified").
+- Data-quality notes (not yet normalised): State has `Orissa`/`Odisha` and `J & K`/`Jammu & Kashmir`;
+  Expecting Timeline has free text ("Will be done in this week", "Will be completed in 2 days") kept as `__text`
+  for ETA parsing (INC-59, M3). `Date` is blank for 920 of 1179 rows.
+- Fixed: `scripts/import_workbook.py --replace` was documented but its flag was never defined (silent edit failure);
+  now defined, and it also removes the old import's open review items.
+
 ## Open questions for the owner
 1. **The repo was empty.** (M2 placeholders added: `config/header_aliases.yaml`, `status_map.yaml`, `workbooks.yaml`.) `CLAUDE.md`, `BUILD_PROMPT.md`, `docs/DECISIONS.md`, `docs/KNOWN_INCONSISTENCIES.md`, `fixtures/` (incl. `golden_cases.yaml`), the blueprint PDF and the real `config/*.yaml` were not available. `config/*.yaml` here are **placeholders** inferred from the brief; `CLAUDE.md` was written by me. Please supply the real files; INC-xx and D1-D15 tests cannot be named until then.
 2. Docker daemon unavailable in the build sandbox; `make up` falls back to `scripts/localpg.sh`.
