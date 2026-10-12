@@ -1,0 +1,9 @@
+# PLACEHOLDER SEED: canonical field -> accepted header spellings (matched after normalization).
+fields:
+  dealer_code: ["dealer code", "dealercode"]
+  division_code: ["division", "division code", "division name"]
+  city: ["city", "town"]
+  state: ["state"]
+  pin: ["pin", "pincode", "pin code"]
+  readiness: ["readiness", "ready status"]
+  phone: ["contact no", "contact number", "mobile"]

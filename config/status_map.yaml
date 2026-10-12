@@ -1,0 +1,8 @@
+# PLACEHOLDER SEED: (sheet role, field, raw value) -> canonical status.
+READY_LIST:
+  readiness:
+    "Ready To Deploy": ready
+MASTER:
+  readiness:
+    "Ready To Deploy": ready
+    "Not Ready": not_ready

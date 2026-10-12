@@ -1,0 +1,18 @@
+# PLACEHOLDER SEED: the owner's real config/groups.yaml was not available when M0 was built.
+# Replace with the owner's file; regexes below are inferred from the examples in the build brief
+# and must be re-validated against the real chat lines.
+clients:
+  tata:
+    name: Tata
+    identity_model: dealer_code_with_divisions
+    dealer_code_regex: '\b30[0-9A-Z]\d{4}\b|\b300[0-9A-Z]\d{2,3}\b'
+    division_code_regex: '\b\d{7}-[^\s]+'
+  maruti:
+    name: Maruti
+    identity_model: outlet_company_channel_town
+    channels: [ARENA, NEXA]
+groups:
+  - name: "Tata Delight Meter Core Group"
+    client: tata
+  - name: "Maruti Dealers DSS Sales"
+    client: maruti

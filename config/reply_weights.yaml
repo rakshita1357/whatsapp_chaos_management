@@ -1,0 +1,11 @@
+# Reply-link scoring weights (build brief 7.3). Tune only against real fixture cases.
+window_hours: 6
+ack_by_sender: 0.30
+assigned_to_sender: 0.20
+status_compat: 0.25
+recency: 0.15
+recency_half_life_min: 60
+attachment_match: 0.40
+already_replied_penalty: -0.40
+auto_link_min_score: 0.80
+auto_link_min_margin: 0.25
