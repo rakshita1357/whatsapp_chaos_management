@@ -1,8 +1,12 @@
-# PLACEHOLDER SEED: (sheet role, field, raw value) -> canonical status.
-READY_LIST:
+# PLACEHOLDER SEED. role -> field -> raw value (casefolded) -> canonical value.
+# Role ANY is the fallback when a role-specific entry is missing.
+ANY:
   readiness:
-    "Ready To Deploy": ready
-MASTER:
-  readiness:
-    "Ready To Deploy": ready
-    "Not Ready": not_ready
+    "ready to deploy": ready
+    "ready": ready
+    "not ready": not_ready
+    "pending": not_ready
+  dispatch_status:
+    "dispatched": dispatched
+    "pending": pending
+    "not dispatched": pending

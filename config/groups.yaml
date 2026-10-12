@@ -5,8 +5,8 @@ clients:
   tata:
     name: Tata
     identity_model: dealer_code_with_divisions
-    dealer_code_regex: '\b30[0-9A-Z]\d{4}\b|\b300[0-9A-Z]\d{2,3}\b'
-    division_code_regex: '\b\d{7}-[^\s]+'
+    dealer_code_regex: '^300[0-9A-Z]\d{3}$'     # e.g. 3007530, 300A490 (300A42 is invalid)
+    division_code_regex: '^300[0-9A-Z]\d{3}-.+$'  # e.g. 3007530-Sv&Pa-Chokidhani-RdrMtr
   maruti:
     name: Maruti
     identity_model: outlet_company_channel_town

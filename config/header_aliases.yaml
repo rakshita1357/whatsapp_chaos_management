@@ -1,9 +1,22 @@
-# PLACEHOLDER SEED: canonical field -> accepted header spellings (matched after normalization).
+# PLACEHOLDER SEED (owner's real file not supplied). canonical field -> type + accepted headers.
+# Headers are matched after normalization (casefold, punctuation/whitespace collapsed).
+# type: positional | code | text | phone | pin | date | enum
 fields:
-  dealer_code: ["dealer code", "dealercode"]
-  division_code: ["division", "division code", "division name"]
-  city: ["city", "town"]
-  state: ["state"]
-  pin: ["pin", "pincode", "pin code"]
-  readiness: ["readiness", "ready status"]
-  phone: ["contact no", "contact number", "mobile"]
+  sr_no:         {type: positional, aliases: ["sr no", "sr. no.", "s no", "sl no", "serial no"]}
+  dealer_code:   {type: code,  aliases: ["dealer code", "dealercode", "dealer id"]}
+  dealer_name:   {type: text,  aliases: ["dealer name", "dealer"]}
+  division_code: {type: code,  aliases: ["division", "division code", "division name", "division id"]}
+  city:          {type: text,  aliases: ["city", "town", "location"]}
+  hub_city:      {type: text,  aliases: ["hub city", "hub"]}
+  state:         {type: text,  aliases: ["state"]}
+  region:        {type: text,  aliases: ["region", "zone"]}
+  pin:           {type: pin,   aliases: ["pin", "pincode", "pin code", "postal code"]}
+  contact_name:  {type: text,  aliases: ["contact person", "contact name", "spoc"]}
+  contact_phone: {type: phone, aliases: ["contact no", "contact number", "mobile", "phone"]}
+  readiness:     {type: enum,  aliases: ["readiness", "ready status", "site readiness", "status"]}
+  phase:         {type: text,  aliases: ["phase"]}
+  site_ready_date:    {type: date, aliases: ["site ready date", "readiness date"]}
+  planned_install_date: {type: date, aliases: ["planned installation date", "install plan date", "installation date"]}
+  dispatch_date: {type: date,  aliases: ["dispatch date", "dispatched on"]}
+  dispatch_status: {type: enum, aliases: ["dispatch status", "device dispatch"]}
+  remarks:       {type: text,  aliases: ["remarks", "remark", "comments"]}

@@ -29,6 +29,7 @@ from app.db.models import (
     SourceMessage,
 )
 from app.entities.people import resolve_sender_keys
+from app.entities.registry import client_id_for_group_name
 from app.ingest.adapters.base import ParseResult
 from app.ingest.envelope import MessageEnvelope
 from app.ingest.keys import assign_logical_keys
@@ -61,9 +62,12 @@ def get_or_create_group(session: Session, name: str) -> tuple[Group, bool]:
         g = session.get(Group, alias.group_id) if alias else None
     if g is not None:
         return g, False
-    g = Group(name=name)
+    configured_client = client_id_for_group_name(session, name)
+    g = Group(name=name, client_id=configured_client)
     session.add(g)
     session.flush()
+    if configured_client is not None:
+        return g, True
     session.add(
         ReviewItem(
             kind="unknown_group_client",
@@ -187,6 +191,8 @@ def _link_attachments(
                 sha, key, _ = store.put_file(path)
                 a.sha256, a.storage_key, a.bytes = sha, key, path.stat().st_size
                 a.mime = mimetypes.guess_type(path.name)[0]
+                if path.suffix.lower() in {".xlsx", ".xlsm", ".xls", ".csv"}:
+                    a.doc_kind = "workbook"
                 a.availability = "present"
                 used.add(ref.export_filename)
         session.add(a)

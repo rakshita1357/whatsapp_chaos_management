@@ -1,0 +1,15 @@
+# PLACEHOLDER SEED. Workbook intelligence settings (build brief section 8).
+default_client: tata
+date_order: DMY            # Indian convention for these sheets
+header_scan_rows: 15
+min_header_alias_hits: 5   # a header row needs >= this many known aliases to be a data_table
+fuzzy_header_min_score: 90
+master_min_rows: 1000      # ~1000+ division rows with mixed readiness => MASTER
+effective_max_cols_scan: 512
+new_setup_marker: "new setup"
+possible_duplicate_city_score: 88
+ready_values: [ready]
+# First matching group (in this order) classifies a changed row in diff summaries.
+diff_column_groups:
+  timeline: [site_ready_date, planned_install_date]
+  dispatch: [dispatch_date, dispatch_status]

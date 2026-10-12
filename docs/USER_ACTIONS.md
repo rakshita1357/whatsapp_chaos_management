@@ -24,6 +24,14 @@ Add these to the repo (push to `main` or tell me where they are):
 - Real `config/*.yaml`: `groups.yaml`, `people.yaml`, `header_aliases.yaml`, `status_map.yaml`, `precedence.yaml`. The ones now in the repo are placeholders and will be overwritten.
 - Fixtures contain real business data. Confirm you are happy with them being in this (private) repo, and with media being sent to the Anthropic API in M4.
 
+## B2. New with M2
+- Real `config/header_aliases.yaml`, `config/status_map.yaml` and the new `config/workbooks.yaml` (master row threshold,
+  date order, column groups for timeline/dispatch). Mine are guesses and will change the diff numbers.
+- Optional: `uv add xlrd` if the owner's sheets include old `.xls` files (otherwise they go to the review queue).
+- To try it: import a chat export folder that contains the `.xlsx` files (`scripts/import_chat.py <folder>`),
+  then in Neon run `select role, version_no, family_key, posted_at from workbook_imports order by posted_at;`
+  and `select summary from workbook_diffs;`. No new migration is needed (tables already exist).
+
 ## C. Needed from M3/M4 (not yet)
 - An **Anthropic API key** in `.env` as `ANTHROPIC_API_KEY=...` for live model runs (`make record`, `make eval-live`). Tests run without it using recorded responses. This is a paid service, so it needs your approval and a spend limit.
 - Optionally set `WCM_VISION_MODEL`, `WCM_TEXT_MODEL`, `WCM_ASSISTANT_MODEL` (defaults are in `.env.example`).

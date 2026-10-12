@@ -8,6 +8,9 @@ from alembic import command
 from alembic.config import Config
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
+from sqlalchemy.orm import Session
+
+from app.db.models import Base
 
 ADMIN_URL = os.environ.get("WCM_TEST_ADMIN_URL", "postgresql+psycopg://wcm:wcm@127.0.0.1/postgres")
 TEST_DB = "wcm_test"
@@ -28,3 +31,14 @@ def engine() -> Iterator[Engine]:
     eng.dispose()
     with admin.connect() as c:
         c.execute(text(f"DROP DATABASE IF EXISTS {TEST_DB} WITH (FORCE)"))
+
+
+@pytest.fixture
+def db(engine: Engine) -> Iterator[Session]:
+    """A session on a freshly truncated test database."""
+    with engine.begin() as c:
+        names = [t.name for t in Base.metadata.sorted_tables]
+        c.execute(text("TRUNCATE " + ", ".join(f'"{n}"' for n in names) + " CASCADE"))
+    with Session(engine) as s:
+        yield s
+        s.rollback()

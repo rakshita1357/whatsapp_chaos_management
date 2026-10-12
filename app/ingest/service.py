@@ -17,6 +17,7 @@ from app.ingest.adapters.whatsapp_export.detect import (
 )
 from app.ingest.adapters.whatsapp_export.zip import safe_extract
 from app.ingest.merge import ImportStats, persist
+from app.workbooks.attachments import ingest_workbook_attachments
 
 _TEXT_EXT = {".txt", ".md"}
 
@@ -53,8 +54,12 @@ def _import_text(
     name = name or result.group_name
     if not name:
         raise ValueError(f"cannot determine group name for {t.name}; pass --group")
-    return [
-        persist(
-            session, result, name, adapter=fmt, file_sha256=sha256_file(t), files=media, store=store
-        )
-    ]
+    imp, stats = persist(
+        session, result, name, adapter=fmt, file_sha256=sha256_file(t), files=media, store=store
+    )
+    if imp.group_id is not None and imp.status == "PROCESSED":
+        session.flush()
+        wb = ingest_workbook_attachments(session, store, imp.group_id, imp)
+        if wb:
+            imp.stats = {**imp.stats, "workbooks": wb}
+    return [(imp, stats)]
